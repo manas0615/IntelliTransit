@@ -76,12 +76,18 @@ export class AuthManager {
         const user = AuthManager.getCurrentUser();
         const isAdmin = user && user.role === "ADMIN";
 
+        const path = window.location.pathname.toLowerCase();
+        const isAuthPage = path.endsWith("/login.html") || 
+                           path.endsWith("/register.html") || 
+                           path.endsWith("/login") || 
+                           path.endsWith("/register");
+
         let linksHtml = `
             <li><a href="/planner.html" class="nav-link">Plan Journey</a></li>
             <li><a href="/ai-assistant.html" class="nav-link">AI Assistant</a></li>
         `;
 
-        if (isAuth) {
+        if (isAuth && !isAuthPage) {
             linksHtml += `
                 <li><a href="/tickets.html" class="nav-link">My Tickets</a></li>
                 <li><a href="/passes.html" class="nav-link">Passes</a></li>
