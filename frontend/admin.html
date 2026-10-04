@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console | IntelliTransit</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/reset.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: var(--spacing-xl) auto;
+      padding: 0 var(--spacing-md);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+    .metric-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      margin: var(--spacing-xs) 0;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: var(--spacing-xs);
+      border-bottom: 2px solid var(--color-border);
+      margin-bottom: var(--spacing-lg);
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <!-- Global Navigation -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" class="brand-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">IntelliTransit</span>
+      </a>
+      <span class="badge" style="background: #fee2e2; color: #991b1b; margin-left: 8px;">Admin Console</span>
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/planner.html">Planner</a></li>
+      <li><a href="/tickets.html">Tickets</a></li>
+      <li><a href="/passes.html">Passes</a></li>
+      <li><a href="/ai-assistant.html">AI Assistant</a></li>
+      <li><a href="/validator.html">Validator</a></li>
+      <li><a href="/admin.html" class="active" id="adminNavLink">Admin</a></li>
+    </ul>
+    <div class="nav-actions" id="navAuth">
+      <a href="/login.html" class="btn btn-outline btn-sm">Login</a>
+    </div>
+  </nav>
+
+  <main class="admin-container">
+    <div class="page-header" style="margin-bottom: var(--spacing-lg); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1>System Administration Dashboard</h1>
+        <p class="text-secondary">Manage transit modes, fare matrices, commuter accounts, and platform health</p>
+      </div>
+      <button class="btn btn-outline btn-sm" id="refreshMetricsBtn">🔄 Refresh Data</button>
+    </div>
+
+    <!-- Live Metric Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="text-secondary" style="font-size: 0.9rem;">Total Registered Users</span>
+        <div class="metric-value" id="statUsers">-</div>
+        <span class="text-secondary" style="font-size: 0.8rem;">Commuters & Admins</span>
+      </div>
+      <div class="metric-card">
+        <span class="text-secondary" style="font-size: 0.9rem;">Total Journeys Planned</span>
+        <div class="metric-value" id="statJourneys">-</div>
+        <span class="text-secondary" style="font-size: 0.8rem;">OTP Engine Queries</span>
+      </div>
+      <div class="metric-card">
+        <span class="text-secondary" style="font-size: 0.9rem;">Platform Revenue</span>
+        <div class="metric-value" id="statRevenue" style="color: #059669;">₹0.00</div>
+        <span class="text-secondary" style="font-size: 0.8rem;">Simulated Demo Payments</span>
+      </div>
+      <div class="metric-card">
+        <span class="text-secondary" style="font-size: 0.9rem;">Active Tickets</span>
+        <div class="metric-value" id="statTickets" style="color: #2563eb;">-</div>
+        <span class="text-secondary" style="font-size: 0.8rem;">Valid in network</span>
+      </div>
+      <div class="metric-card">
+        <span class="text-secondary" style="font-size: 0.9rem;">Active Passes</span>
+        <div class="metric-value" id="statPasses" style="color: #7c3aed;">-</div>
+        <span class="text-secondary" style="font-size: 0.8rem;">Daily/Weekly/Monthly</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="tab-services">🚌 Services & Fare Rules</button>
+      <button class="tab-btn" data-tab="tab-users">👥 User Accounts</button>
+      <button class="tab-btn" data-tab="tab-validations">🔍 Validation Audit</button>
+    </div>
+
+    <!-- Tab 1: Services & Fares -->
+    <section id="tab-services" class="tab-pane active">
+      <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <h3 style="margin-bottom: var(--spacing-md);">Transit Services</h3>
+        <div class="table-responsive">
+          <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid var(--color-border);">
+                <th style="padding: 8px;">Service Name</th>
+                <th style="padding: 8px;">Operator</th>
+                <th style="padding: 8px;">Mode</th>
+                <th style="padding: 8px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="servicesTableBody">
+              <tr><td colspan="4" class="text-center text-secondary" style="padding: 16px;">Loading services...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: var(--spacing-md);">Fare Matrix Configuration</h3>
+        <div class="table-responsive">
+          <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid var(--color-border);">
+                <th style="padding: 8px;">Service</th>
+                <th style="padding: 8px;">Base Fare (₹)</th>
+                <th style="padding: 8px;">Per Km Rate (₹)</th>
+                <th style="padding: 8px;">Min Fare (₹)</th>
+                <th style="padding: 8px;">Effective From</th>
+              </tr>
+            </thead>
+            <tbody id="faresTableBody">
+              <tr><td colspan="5" class="text-center text-secondary" style="padding: 16px;">Loading fare rules...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Users -->
+    <section id="tab-users" class="tab-pane">
+      <div class="card">
+        <h3 style="margin-bottom: var(--spacing-md);">Platform User Directory</h3>
+        <div class="table-responsive">
+          <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid var(--color-border);">
+                <th style="padding: 8px;">Name</th>
+                <th style="padding: 8px;">Email</th>
+                <th style="padding: 8px;">Role</th>
+                <th style="padding: 8px;">Status</th>
+                <th style="padding: 8px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="5" class="text-center text-secondary" style="padding: 16px;">Loading users...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Validations Audit -->
+    <section id="tab-validations" class="tab-pane">
+      <div class="card">
+        <h3 style="margin-bottom: var(--spacing-md);">Recent Ticket Validations Log</h3>
+        <div class="table-responsive">
+          <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid var(--color-border);">
+                <th style="padding: 8px;">Timestamp</th>
+                <th style="padding: 8px;">Inspector</th>
+                <th style="padding: 8px;">Status</th>
+                <th style="padding: 8px;">Route</th>
+                <th style="padding: 8px;">Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="validationsTableBody">
+              <tr><td colspan="5" class="text-center text-secondary" style="padding: 16px;">Loading validation logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

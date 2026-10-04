@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Digital Tickets — IntelliTransit</title>
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 900px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2>My Digital Tickets</h2>
+            <a href="/planner.html" class="btn btn-primary btn-sm">+ Buy New Ticket</a>
+        </div>
+
+        <!-- Filter tabs -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <button class="btn btn-outline btn-sm filter-btn active" data-status="">All Tickets</button>
+            <button class="btn btn-outline btn-sm filter-btn" data-status="ACTIVE">Active</button>
+            <button class="btn btn-outline btn-sm filter-btn" data-status="PENDING">Pending Payment</button>
+            <button class="btn btn-outline btn-sm filter-btn" data-status="USED">Used</button>
+            <button class="btn btn-outline btn-sm filter-btn" data-status="CANCELLED">Cancelled</button>
+        </div>
+
+        <div id="tickets-container">
+            <div style="text-align: center; padding: 40px;"><span class="spinner"></span> Loading tickets...</div>
+        </div>
+    </main>
+
+    <!-- Payment Checkout Modal (Simulated Demo Payment) -->
+    <div id="payment-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+        <div class="card" style="max-width: 400px; width: 90%; text-align: center; padding: 24px;">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">💳</div>
+            <h3 id="pay-modal-title" style="margin-bottom: 8px;">Demo Simulated Payment</h3>
+            <p id="pay-modal-desc" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;"></p>
+            <div style="background: var(--bg-muted); padding: 14px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Total Fare</div>
+                <div id="pay-modal-amount" style="font-size: 1.6rem; font-weight: 800; color: var(--primary);"></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Internal Demo Payment System • Instant Verification</div>
+            </div>
+            <button id="pay-confirm-btn" class="btn btn-primary btn-lg" style="width: 100%; margin-bottom: 8px;">
+                ⚡ Pay & Activate Ticket
+            </button>
+            <button id="pay-cancel-btn" class="btn btn-outline" style="width: 100%;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+        <div class="card" style="max-width: 380px; width: 90%; text-align: center; padding: 24px;">
+            <h3 id="modal-title" style="margin-bottom: 8px;">Ticket QR Code</h3>
+            <p id="modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">Show this QR code to validator or scan at turnstile</p>
+            <div id="modal-qr-img-container" style="display: flex; justify-content: center; margin-bottom: 16px;">
+                <img id="modal-qr-img" src="" alt="QR Code" style="width: 220px; height: 220px; border: 1px solid var(--border-color); border-radius: 8px; image-rendering: pixelated;">
+            </div>
+            <div id="modal-token-str" style="font-family: var(--font-mono); font-size: 0.8rem; background: var(--bg-muted); padding: 6px; border-radius: 4px; margin-bottom: 16px; word-break: break-all;"></div>
+            <button id="close-modal-btn" class="btn btn-outline" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import ApiClient from "/js/api.js";
+        import { formatCurrency, escapeHTML, showSuccess, showError } from "/js/utils.js";
+
+        let currentStatusFilter = "";
+
+        // Check if query param has action=buy
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get("action");
+        const paramJourneyId = urlParams.get("journey_id");
+        const paramLegId = urlParams.get("leg_id");
+
+        if (action === "buy" && paramJourneyId && paramLegId) {
+            initiateTicketPurchase(paramJourneyId, paramLegId);
+        }
+
+        async function initiateTicketPurchase(journeyId, legId) {
+            try {
+                const resp = await ApiClient.post("/tickets", {
+                    journey_id: journeyId,
+                    journey_leg_id: legId
+                });
+                const ticket = resp.data.ticket;
+                const payment = resp.data.payment;
+                showSuccess("Ticket created! Opening payment confirmation...");
+                startPaymentFlow(ticket.ticket_id, ticket.fare, ticket.origin, ticket.destination, payment?.payment_id, payment?.transaction_reference);
+            } catch (err) {
+                showError("Could not create ticket: " + err.message);
+            }
+        }
+
+        window.startPaymentFlow = async function(ticketId, fare, origin, dest, existingPaymentId = null, existingTxRef = null) {
+            let paymentId = existingPaymentId;
+            let txRef = existingTxRef;
+            if (!paymentId || !txRef) {
+                try {
+                    const orderResp = await ApiClient.post("/payments/create-order", {
+                        item_type: "TICKET",
+                        item_id: ticketId
+                    });
+                    paymentId = orderResp.data.payment_id;
+                    txRef = orderResp.data.transaction_reference;
+                } catch (e) {
+                    showError("Could not initialize payment: " + e.message);
+                    return;
+                }
+            }
+
+            const modal = document.getElementById("payment-modal");
+            document.getElementById("pay-modal-title").textContent = "Confirm Ticket Payment";
+            document.getElementById("pay-modal-desc").textContent = `${origin} → ${dest}`;
+            document.getElementById("pay-modal-amount").textContent = formatCurrency(fare);
+
+            modal.style.display = "flex";
+
+            const confirmBtn = document.getElementById("pay-confirm-btn");
+            const cancelBtn = document.getElementById("pay-cancel-btn");
+
+            confirmBtn.onclick = async () => {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = "Verifying...";
+                try {
+                    await ApiClient.post("/payments/confirm", {
+                        payment_id: paymentId,
+                        transaction_reference: txRef
+                    });
+                    showSuccess("Payment verified! Ticket is now ACTIVE.");
+                    modal.style.display = "none";
+                    window.history.replaceState({}, document.title, "/tickets.html");
+                    loadTickets();
+                } catch (e) {
+                    showError("Payment verification failed: " + e.message);
+                } finally {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "⚡ Pay & Activate Ticket";
+                }
+            };
+
+            cancelBtn.onclick = () => {
+                modal.style.display = "none";
+                window.history.replaceState({}, document.title, "/tickets.html");
+                loadTickets();
+            };
+        };
+
+        async function loadTickets() {
+            const container = document.getElementById("tickets-container");
+            try {
+                const params = currentStatusFilter ? { status: currentStatusFilter } : {};
+                const resp = await ApiClient.get("/tickets", params);
+                const tickets = resp.data.tickets || [];
+
+                if (tickets.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; padding: 48px 16px;">
+                            <h3>No Tickets Found</h3>
+                            <p>You have no tickets matching this filter.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = tickets.map(t => `
+                    <div class="card" style="border-left: 4px solid var(--primary);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <span class="badge badge-${(t.mode || 'bus').toLowerCase()}">${t.mode || 'TRANSIT'}</span>
+                                <span class="badge badge-status-${t.status.toLowerCase()}" style="margin-left: 6px;">${t.status}</span>
+                                <h3 style="margin: 8px 0 4px 0;">${escapeHTML(t.origin)} → ${escapeHTML(t.destination)}</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                    ${t.service_name ? escapeHTML(t.service_name) + ' • ' : ''}Ticket ID: ${t.ticket_id.slice(0, 8)}...
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.3rem; font-weight: 800; color: var(--primary);">${formatCurrency(t.fare)}</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                                ${t.valid_until ? 'Valid until: ' + new Date(t.valid_until).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Pending Payment'}
+                            </span>
+                            <div style="display: flex; gap: 8px;">
+                                ${t.status === 'ACTIVE' ? `
+                                    <button class="btn btn-primary btn-sm view-qr-btn" data-id="${t.ticket_id}" data-token="${escapeHTML(t.ticket_token)}" data-origin="${escapeHTML(t.origin)}" data-dest="${escapeHTML(t.destination)}">
+                                        📱 View QR Code
+                                    </button>
+                                    <button class="btn btn-outline btn-sm cancel-tkt-btn" data-id="${t.ticket_id}" style="color: var(--error);">
+                                        Cancel & Refund
+                                    </button>
+                                ` : ''}
+                                ${t.status === 'PENDING' ? `
+                                    <button class="btn btn-accent btn-sm pay-now-btn" data-id="${t.ticket_id}" data-fare="${t.fare}" data-origin="${escapeHTML(t.origin)}" data-dest="${escapeHTML(t.destination)}">
+                                        💳 Complete Payment (${formatCurrency(t.fare)})
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join("");
+
+                // Attach button event listeners
+                container.querySelectorAll(".view-qr-btn").forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        const tId = e.currentTarget.dataset.id;
+                        const token = e.currentTarget.dataset.token;
+                        const orig = e.currentTarget.dataset.origin;
+                        const dest = e.currentTarget.dataset.dest;
+                        showQRModal(tId, token, `${orig} → ${dest}`);
+                    });
+                });
+
+                container.querySelectorAll(".pay-now-btn").forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        const tId = e.currentTarget.dataset.id;
+                        const fare = parseFloat(e.currentTarget.dataset.fare);
+                        const orig = e.currentTarget.dataset.origin;
+                        const dest = e.currentTarget.dataset.dest;
+                        startPaymentFlow(tId, fare, orig, dest);
+                    });
+                });
+
+                container.querySelectorAll(".cancel-tkt-btn").forEach(btn => {
+                    btn.addEventListener("click", async (e) => {
+                        if (!confirm("Are you sure you want to cancel this ticket? Refund will be processed.")) return;
+                        const tId = e.currentTarget.dataset.id;
+                        try {
+                            await ApiClient.put(`/tickets/${tId}/cancel`);
+                            showSuccess("Ticket cancelled. Refund initiated.");
+                            loadTickets();
+                        } catch (err) {
+                            showError("Cancellation failed: " + err.message);
+                        }
+                    });
+                });
+
+            } catch (err) {
+                container.innerHTML = `<div class="card" style="color: var(--error);">Error: ${escapeHTML(err.message)}</div>`;
+            }
+        }
+
+        async function showQRModal(ticketId, token, title) {
+            const modal = document.getElementById("qr-modal");
+            document.getElementById("modal-title").textContent = title;
+            document.getElementById("modal-token-str").textContent = token;
+            const img = document.getElementById("modal-qr-img");
+            img.src = "";
+            modal.style.display = "flex";
+            try {
+                const resp = await ApiClient.get(`/validation/tickets/${ticketId}/qr`);
+                img.src = resp.data.qr_data_uri;
+            } catch (err) {
+                showError("Failed to fetch QR code: " + err.message);
+            }
+        }
+
+        document.getElementById("close-modal-btn").addEventListener("click", () => {
+            document.getElementById("qr-modal").style.display = "none";
+        });
+
+        document.querySelectorAll(".filter-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+                e.currentTarget.classList.add("active");
+                currentStatusFilter = e.currentTarget.dataset.status;
+                loadTickets();
+            });
+        });
+
+        loadTickets();
+    </script>
+</body>
+</html>

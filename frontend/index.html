@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliTransit — Intelligent Multimodal Journey Planning for Pune</title>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links">
+                <!-- Dynamically populated by auth.js -->
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="container">
+        <div class="card" style="text-align: center; padding: 48px 24px; background: linear-gradient(135deg, #1e3a8a, #0d9488); color: #ffffff; border: none;">
+            <h1 style="color: #ffffff; font-size: 2.75rem; margin-bottom: 16px;">Intelligent Multimodal Transit for Pune</h1>
+            <p style="color: #e2e8f0; font-size: 1.2rem; max-width: 700px; margin: 0 auto 32px auto;">
+                Seamlessly plan journeys across PMPML Bus, Pune Metro, and Taxis with intelligent route ranking, authoritative fare estimations, and digital ticketing.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+                <a href="/planner.html" class="btn btn-accent btn-lg" style="font-size: 1.1rem;">
+                    🗺️ Plan Your Journey
+                </a>
+                <a href="/ai-assistant.html" class="btn btn-outline btn-lg" style="color: #ffffff; border-color: rgba(255,255,255,0.6);">
+                    🤖 AI Assistant
+                </a>
+            </div>
+        </div>
+
+        <!-- Mode Grid Feature Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 32px;">
+            <div class="card">
+                <span class="badge badge-bus" style="margin-bottom: 12px;">PMPML Bus</span>
+                <h3>City Bus Network</h3>
+                <p>Complete scheduled bus routes with transfer connections across Pune and Pimpri-Chinchwad.</p>
+            </div>
+            <div class="card">
+                <span class="badge badge-metro" style="margin-bottom: 12px;">Pune Metro</span>
+                <h3>Rapid Rail Transit</h3>
+                <p>High-speed Purple and Aqua lines connecting PCMC, Swargate, Vanaz, and Ramwadi via Civil Court Interchange.</p>
+            </div>
+            <div class="card">
+                <span class="badge badge-taxi" style="margin-bottom: 12px;">Hired Taxi</span>
+                <h3>Road Transport</h3>
+                <p>Curated distance-based taxi connections for flexible first-mile and last-mile travel.</p>
+            </div>
+            <div class="card">
+                <span class="badge badge-walk" style="margin-bottom: 12px;">Pedestrian</span>
+                <h3>Walking & Transfers</h3>
+                <p>Precise OpenStreetMap-powered pedestrian walking segments between transit stops.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 IntelliTransit Platform — SPPU Computer Science Project. Focused on Pune, Maharashtra.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="/js/auth.js"></script>
+</body>
+</html>

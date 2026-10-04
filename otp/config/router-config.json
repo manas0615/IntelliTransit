@@ -1,0 +1,12 @@
+{
+  "routingDefaults": {
+    "walkSpeed": 1.33,
+    "transferSlack": 120,
+    "maxTransfers": 4,
+    "walkReluctance": 1.75,
+    "waitReluctance": 1.0,
+    "waitAtBeginningFactor": 0.5,
+    "streetRoutingTimeout": 5.0
+  },
+  "vectorTileLayers": []
+}

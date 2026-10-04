@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile & Preferences — IntelliTransit</title>
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 800px;">
+        <h2>User Profile & Transit Preferences</h2>
+
+        <!-- Profile Card -->
+        <div class="card">
+            <h3>Personal Information</h3>
+            <form id="profile-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input class="form-input" type="text" id="full_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address (Read-only)</label>
+                        <input class="form-input" type="email" id="email" disabled style="background-color: var(--bg-muted);">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input class="form-input" type="tel" id="phone" placeholder="9876543210">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Save Profile</button>
+            </form>
+        </div>
+
+        <!-- Preferences Card -->
+        <div class="card">
+            <h3>Transportation & Routing Preferences</h3>
+            <form id="preferences-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Default Route Priority</label>
+                        <select class="form-select" id="route_preference">
+                            <option value="FASTEST">Fastest Journey</option>
+                            <option value="CHEAPEST">Cheapest Fare</option>
+                            <option value="LEAST_WALKING">Least Walking</option>
+                            <option value="FEWEST_TRANSFERS">Fewest Transfers</option>
+                            <option value="BALANCED">Balanced Multi-Criteria</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preferred Mode</label>
+                        <select class="form-select" id="preferred_mode">
+                            <option value="">No Preference</option>
+                            <option value="METRO">Pune Metro</option>
+                            <option value="BUS">PMPML Bus</option>
+                            <option value="TAXI">Taxi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Maximum Walking Distance (Meters)</label>
+                    <input class="form-input" type="number" id="max_walking_distance_m" min="100" max="10000" step="100">
+                </div>
+
+                <div style="display: flex; gap: 24px; margin: 16px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="avoid_taxi">
+                        <span>Avoid Taxi (Hired Road Vehicles)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="avoid_transfers">
+                        <span>Avoid Transfers Where Possible</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">Save Preferences</button>
+            </form>
+        </div>
+
+        <!-- Saved Locations Card -->
+        <div class="card">
+            <h3>Saved Places (Home, College, Work)</h3>
+            <div id="saved-locations-list" style="margin-bottom: 20px;">
+                <!-- Dynamically populated -->
+            </div>
+
+            <h4>Add New Place</h4>
+            <form id="add-location-form" style="margin-top: 12px;">
+                <div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 12px;">
+                    <input class="form-input" type="text" id="loc_label" placeholder="Label (e.g. Home)" required>
+                    <input class="form-input" type="text" id="loc_name" placeholder="Place / Landmark Name" required>
+                    <input class="form-input" type="text" id="loc_address" placeholder="Address (Optional)">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 120px; gap: 12px; margin-top: 8px;">
+                    <input class="form-input" type="number" step="0.0001" id="loc_lat" placeholder="Latitude (e.g. 18.5285)" required>
+                    <input class="form-input" type="number" step="0.0001" id="loc_lng" placeholder="Longitude (e.g. 73.8743)" required>
+                    <button type="submit" class="btn btn-secondary btn-sm" style="height: 42px;">Add Place</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script type="module">
+        import ApiClient from "/js/api.js";
+        import { showSuccess, showError, escapeHTML } from "/js/utils.js";
+
+        async function loadProfileData() {
+            try {
+                const resp = await ApiClient.get("/users/profile");
+                const user = resp.data.user;
+
+                document.getElementById("full_name").value = user.full_name || "";
+                document.getElementById("email").value = user.email || "";
+                document.getElementById("phone").value = user.phone || "";
+
+                const pref = user.preferences || {};
+                document.getElementById("route_preference").value = pref.route_preference || "FASTEST";
+                document.getElementById("preferred_mode").value = pref.preferred_mode || "";
+                document.getElementById("max_walking_distance_m").value = pref.max_walking_distance_m || 1500;
+                document.getElementById("avoid_taxi").checked = !!pref.avoid_taxi;
+                document.getElementById("avoid_transfers").checked = !!pref.avoid_transfers;
+
+                loadSavedLocations();
+            } catch (err) {
+                showError("Could not load profile: " + err.message);
+            }
+        }
+
+        async function loadSavedLocations() {
+            try {
+                const resp = await ApiClient.get("/users/locations");
+                const locs = resp.data.locations || [];
+                const container = document.getElementById("saved-locations-list");
+
+                if (locs.length === 0) {
+                    container.innerHTML = "<p style='color: var(--text-muted);'>No saved places yet.</p>";
+                    return;
+                }
+
+                container.innerHTML = locs.map(l => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <strong>${escapeHTML(l.label)}</strong>: ${escapeHTML(l.location_name)}
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">${l.latitude.toFixed(4)}, ${l.longitude.toFixed(4)}</div>
+                        </div>
+                        <button class="btn btn-outline btn-sm delete-loc-btn" data-id="${l.location_id}" style="color: var(--error);">Delete</button>
+                    </div>
+                `).join("");
+
+                document.querySelectorAll(".delete-loc-btn").forEach(btn => {
+                    btn.addEventListener("click", async (e) => {
+                        const id = e.target.dataset.id;
+                        await ApiClient.delete(`/users/locations/${id}`);
+                        showSuccess("Location deleted.");
+                        loadSavedLocations();
+                    });
+                });
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        document.getElementById("profile-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            try {
+                await ApiClient.put("/users/profile", {
+                    full_name: document.getElementById("full_name").value,
+                    phone: document.getElementById("phone").value
+                });
+                showSuccess("Profile updated successfully!");
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        document.getElementById("preferences-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            try {
+                await ApiClient.put("/users/preferences", {
+                    route_preference: document.getElementById("route_preference").value,
+                    preferred_mode: document.getElementById("preferred_mode").value || null,
+                    max_walking_distance_m: parseInt(document.getElementById("max_walking_distance_m").value, 10),
+                    avoid_taxi: document.getElementById("avoid_taxi").checked,
+                    avoid_transfers: document.getElementById("avoid_transfers").checked
+                });
+                showSuccess("Transit preferences saved!");
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        document.getElementById("add-location-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            try {
+                await ApiClient.post("/users/locations", {
+                    label: document.getElementById("loc_label").value,
+                    location_name: document.getElementById("loc_name").value,
+                    address: document.getElementById("loc_address").value,
+                    latitude: parseFloat(document.getElementById("loc_lat").value),
+                    longitude: parseFloat(document.getElementById("loc_lng").value)
+                });
+                showSuccess("Saved place added!");
+                document.getElementById("add-location-form").reset();
+                loadSavedLocations();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        loadProfileData();
+    </script>
+</body>
+</html>

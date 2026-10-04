@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey History — IntelliTransit</title>
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 900px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Past Journey History</h2>
+            <a href="/planner.html" class="btn btn-primary btn-sm">+ Plan New Journey</a>
+        </div>
+
+        <div id="history-container">
+            <div style="text-align: center; padding: 40px;"><span class="spinner"></span> Loading history...</div>
+        </div>
+    </main>
+
+    <script type="module">
+        import ApiClient from "/js/api.js";
+        import { formatCurrency, formatDuration, formatDistance, escapeHTML, showError } from "/js/utils.js";
+
+        async function loadHistory() {
+            const container = document.getElementById("history-container");
+            try {
+                const resp = await ApiClient.get("/journeys");
+                const journeys = resp.data.journeys || [];
+
+                if (journeys.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; padding: 48px 16px;">
+                            <h3>No Journey History Yet</h3>
+                            <p>Plan a journey to automatically record your trips and view multimodal routes.</p>
+                            <a href="/planner.html" class="btn btn-primary" style="margin-top: 12px;">Start Planning</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = journeys.map(j => {
+                    const legs = j.legs || [];
+                    const modes = [...new Set(legs.map(l => l.mode))];
+                    const dateStr = new Date(j.created_at).toLocaleDateString('en-IN', {
+                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="card" style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                <div>
+                                    <h3 style="margin-bottom: 4px;">${escapeHTML(j.origin_name)} → ${escapeHTML(j.destination_name)}</h3>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Planned on ${dateStr}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">${formatCurrency(j.estimated_fare)}</span>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">⏱️ ${formatDuration(j.total_duration_min)}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Modes:</span>
+                                ${modes.map(m => `<span class="badge badge-${m.toLowerCase()}">${m}</span>`).join(" ")}
+                                <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 8px;">🚶 Walking: ${formatDistance(j.walking_distance_m)}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+
+            } catch (err) {
+                container.innerHTML = `<div class="card" style="color: var(--error);">Failed to load history: ${escapeHTML(err.message)}</div>`;
+            }
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>

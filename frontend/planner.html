@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Planner — IntelliTransit</title>
+    <!-- MapLibre GL JS -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+    <!-- IntelliTransit CSS -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/map.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body style="overflow: hidden;">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <!-- Split-Screen Layout: Inputs & Route Cards on Left, Map on Right -->
+    <div class="split-layout">
+        <!-- Left Panel: Journey Planning Inputs & Results -->
+        <div class="split-panel">
+            <div class="card" style="margin-bottom: 16px;">
+                <h3 style="margin-bottom: 12px;">Plan Your Route</h3>
+
+                <!-- Quick Saved Places -->
+                <div id="quick-locations" style="margin-bottom: 12px;"></div>
+
+                <form id="planner-form">
+                    <!-- Origin Field with Autocomplete -->
+                    <div class="form-group" style="position: relative;">
+                        <label class="form-label" for="origin-input">🟢 Origin / Departure Point</label>
+                        <input class="form-input" type="text" id="origin-input" placeholder="e.g. Pune Railway Station" required autocomplete="off">
+                        <input type="hidden" id="origin-lat">
+                        <input type="hidden" id="origin-lng">
+                        <div id="origin-suggestions" class="card" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; max-height: 200px; overflow-y: auto; padding: 0; margin-top: 2px;"></div>
+                    </div>
+
+                    <!-- Swap Button -->
+                    <div style="text-align: center; margin: -6px 0 6px 0;">
+                        <button type="button" id="swap-locations-btn" class="btn btn-outline btn-sm" title="Swap Origin & Destination">
+                            ⇅ Swap
+                        </button>
+                    </div>
+
+                    <!-- Destination Field with Autocomplete -->
+                    <div class="form-group" style="position: relative;">
+                        <label class="form-label" for="dest-input">🔴 Destination / Arrival Point</label>
+                        <input class="form-input" type="text" id="dest-input" placeholder="e.g. Civil Court Metro" required autocomplete="off">
+                        <input type="hidden" id="dest-lat">
+                        <input type="hidden" id="dest-lng">
+                        <div id="dest-suggestions" class="card" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; max-height: 200px; overflow-y: auto; padding: 0; margin-top: 2px;"></div>
+                    </div>
+
+                    <!-- Preferences Section -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0;">
+                        <div class="form-group">
+                            <label class="form-label" for="route-pref-select">Priority</label>
+                            <select class="form-select" id="route-pref-select">
+                                <option value="FASTEST">⚡ Fastest</option>
+                                <option value="CHEAPEST">💰 Cheapest</option>
+                                <option value="LEAST_WALKING">🚶 Least Walking</option>
+                                <option value="FEWEST_TRANSFERS">🔄 Fewest Transfers</option>
+                                <option value="BALANCED">⚖️ Balanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="justify-content: flex-end; padding-bottom: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                                <input type="checkbox" id="avoid-taxi-toggle">
+                                <span>Avoid Taxi</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="plan-submit-btn" class="btn btn-primary btn-lg" style="width: 100%;">
+                        🔍 Find Routes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-container">
+                <div class="card" style="text-align: center; color: var(--text-muted); padding: 32px 16px;">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">📍</div>
+                    <p>Enter origin and destination in Pune to view ranked multimodal transit itineraries.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Interactive MapLibre Map -->
+        <div class="split-map-container">
+            <div id="map"></div>
+
+            <!-- Map Mode Legend -->
+            <div class="map-legend">
+                <div style="font-weight: bold; margin-bottom: 2px;">Transit Modes</div>
+                <div class="legend-item"><div class="legend-color legend-walk"></div><span>Walk / Transfer (Free)</span></div>
+                <div class="legend-item"><div class="legend-color legend-bus"></div><span>PMPML Bus</span></div>
+                <div class="legend-item"><div class="legend-color legend-metro"></div><span>Pune Metro</span></div>
+                <div class="legend-item"><div class="legend-color legend-taxi"></div><span>Taxi</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/planner.js"></script>
+</body>
+</html>

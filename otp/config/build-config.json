@@ -1,0 +1,21 @@
+{
+  "osm": [
+    {
+      "source": "pune.osm.pbf"
+    }
+  ],
+  "transit": [
+    {
+      "type": "gtfs",
+      "source": "gtfs/pune_metro_gtfs.zip"
+    },
+    {
+      "type": "gtfs",
+      "source": "gtfs/pmpml_bus_gtfs.zip"
+    }
+  ],
+  "areaVisibility": true,
+  "islandPruning": {
+    "pruningThresholdIslandWithoutStops": 40
+  }
+}

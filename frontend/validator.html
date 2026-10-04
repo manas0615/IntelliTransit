@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket & Pass Validator | IntelliTransit Conductor</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/reset.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    .validator-container {
+      max-width: 800px;
+      margin: var(--spacing-xl) auto;
+      padding: 0 var(--spacing-md);
+    }
+    .scanner-box {
+      background: var(--color-surface);
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      text-align: center;
+      margin-bottom: var(--spacing-xl);
+    }
+    .scan-input {
+      font-family: monospace;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .result-card {
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .result-success {
+      background: #ecfdf5;
+      border: 2px solid var(--color-success);
+      color: #065f46;
+    }
+    .result-error {
+      background: #fef2f2;
+      border: 2px solid var(--color-error);
+      color: #991b1b;
+    }
+    .badge-mode {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-BUS { background: #dbeafe; color: #1e40af; }
+    .badge-METRO { background: #e0e7ff; color: #4338ca; }
+    .badge-TAXI { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+  <!-- Global Navigation -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a href="/" class="brand-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">IntelliTransit</span>
+      </a>
+      <span class="badge" style="background: var(--color-primary-light); color: var(--color-primary); margin-left: 8px;">Conductor Mode</span>
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/planner.html">Journey Planner</a></li>
+      <li><a href="/tickets.html">My Tickets</a></li>
+      <li><a href="/passes.html">Passes</a></li>
+      <li><a href="/validator.html" class="active">Validator</a></li>
+      <li><a href="/admin.html" id="adminNavLink" style="display:none;">Admin</a></li>
+    </ul>
+    <div class="nav-actions" id="navAuth">
+      <a href="/login.html" class="btn btn-outline btn-sm">Login</a>
+      <a href="/register.html" class="btn btn-primary btn-sm">Sign Up</a>
+    </div>
+  </nav>
+
+  <main class="validator-container">
+    <div class="page-header text-center" style="margin-bottom: var(--spacing-lg);">
+      <h1>Ticket & Pass Inspection Scanner</h1>
+      <p class="text-secondary">Scan QR code or enter token code to verify transit validity</p>
+    </div>
+
+    <!-- Scanner & Token Input Area -->
+    <div class="card scanner-box">
+      <form id="validateForm">
+        <div class="form-group">
+          <label for="tokenInput" class="form-label" style="font-weight: 600;">Scan QR or Enter Token Code</label>
+          <input
+            type="text"
+            id="tokenInput"
+            class="form-control scan-input"
+            placeholder="e.g. TKT-9B4F8A or PASS-DAILY-1C2D3E"
+            autofocus
+            required
+          >
+          <p class="form-hint">Conductor gate scanner auto-triggers on complete QR payload</p>
+        </div>
+        <div style="display: flex; gap: var(--spacing-md); justify-content: center; margin-top: var(--spacing-md);">
+          <button type="submit" class="btn btn-primary btn-lg" id="scanBtn">
+            <span>🔍 Validate Entry</span>
+          </button>
+          <button type="button" class="btn btn-outline btn-lg" id="clearBtn">
+            Clear
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Verification Result Display -->
+    <div id="resultSuccess" class="result-card result-success">
+      <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+        <div style="font-size: 2.5rem;">✅</div>
+        <div>
+          <h2 style="margin: 0; color: #065f46;">VALID TRANSIT TOKEN</h2>
+          <p id="successMessage" style="margin: 0; font-weight: 500;"></p>
+        </div>
+      </div>
+      <div id="ticketDetailsContainer" class="card" style="background: white; border: 1px solid #a7f3d0; padding: var(--spacing-md); margin-top: var(--spacing-sm);">
+        <!-- Populated dynamically by validator.js -->
+      </div>
+    </div>
+
+    <div id="resultError" class="result-card result-error">
+      <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+        <div style="font-size: 2.5rem;">❌</div>
+        <div>
+          <h2 style="margin: 0; color: #991b1b;">ACCESS REJECTED</h2>
+          <p id="errorMessage" style="margin: 0; font-weight: 600; font-size: 1.1rem;"></p>
+          <p id="errorDetails" class="text-secondary" style="margin: 4px 0 0 0; font-size: 0.9rem;"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Scans History -->
+    <div class="card" style="margin-top: var(--spacing-xl);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+        <h3 style="margin: 0;">Recent Validations Log</h3>
+        <button class="btn btn-outline btn-sm" id="refreshHistoryBtn">Refresh</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="text-align: left; border-bottom: 2px solid var(--color-border);">
+              <th style="padding: 8px;">Time</th>
+              <th style="padding: 8px;">Ticket/Token</th>
+              <th style="padding: 8px;">Status</th>
+              <th style="padding: 8px;">Details</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr><td colspan="4" class="text-center text-secondary" style="padding: 16px;">Loading recent scans...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-bottom text-center">
+      <p>&copy; 2026 IntelliTransit Platform. Conductor Terminal.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="/js/validator.js"></script>
+</body>
+</html>

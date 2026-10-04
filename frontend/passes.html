@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transit Passes — IntelliTransit</title>
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 900px;">
+        <h2>Pune Unified Transit Passes</h2>
+        <p>Unlimited rides on PMPML Bus and Pune Metro networks.</p>
+
+        <!-- Buy Pass Options Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0;">
+            <div class="card" style="border-top: 4px solid var(--secondary); text-align: center;">
+                <span class="badge badge-bus">Daily Pass</span>
+                <h3 style="margin: 12px 0 6px 0;">1-Day Unlimited</h3>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-bottom: 8px;">₹50.00</div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Valid 24 hours across all Pune buses & metro lines.</p>
+                <button class="btn btn-secondary buy-pass-btn" data-type="DAILY" style="width: 100%; margin-top: 12px;">
+                    Buy Daily Pass
+                </button>
+            </div>
+
+            <div class="card" style="border-top: 4px solid var(--primary); text-align: center;">
+                <span class="badge badge-metro">Weekly Pass</span>
+                <h3 style="margin: 12px 0 6px 0;">7-Day Unlimited</h3>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-bottom: 8px;">₹300.00</div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Valid 7 days for everyday commuters and students.</p>
+                <button class="btn btn-primary buy-pass-btn" data-type="WEEKLY" style="width: 100%; margin-top: 12px;">
+                    Buy Weekly Pass
+                </button>
+            </div>
+
+            <div class="card" style="border-top: 4px solid var(--accent); text-align: center;">
+                <span class="badge badge-taxi">Monthly Pass</span>
+                <h3 style="margin: 12px 0 6px 0;">30-Day Pass</h3>
+                <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-bottom: 8px;">₹1000.00</div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Maximum monthly savings with unlimited travel access.</p>
+                <button class="btn btn-accent buy-pass-btn" data-type="MONTHLY" style="width: 100%; margin-top: 12px;">
+                    Buy Monthly Pass
+                </button>
+            </div>
+        </div>
+
+        <h3 style="margin: 32px 0 16px 0;">My Active & Past Passes</h3>
+        <div id="passes-container">
+            <div style="text-align: center; padding: 20px;"><span class="spinner"></span> Loading your passes...</div>
+        </div>
+    </main>
+
+    <script type="module">
+        import ApiClient from "/js/api.js";
+        import { formatCurrency, escapeHTML, showSuccess, showError } from "/js/utils.js";
+
+        document.querySelectorAll(".buy-pass-btn").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                if (!ApiClient.getToken()) {
+                    showError("Please sign in or register to purchase transit passes.");
+                    setTimeout(() => window.location.href = "/login.html", 1200);
+                    return;
+                }
+                const passType = e.currentTarget.dataset.type;
+                const origText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = "Processing...";
+                try {
+                    const resp = await ApiClient.post("/passes", { pass_type: passType });
+                    const pass = resp.data.pass;
+                    const payment = resp.data.payment;
+                    showSuccess(`${passType} Pass order created. Confirming demo payment...`);
+
+                    // Confirm via authoritative simulated payment endpoint
+                    await ApiClient.post("/payments/confirm", {
+                        payment_id: payment.payment_id,
+                        transaction_reference: payment.transaction_reference
+                    });
+
+                    showSuccess(`Demo payment confirmed! ${passType} Pass is now ACTIVE.`);
+                    loadPasses();
+                } catch (err) {
+                    showError("Pass purchase failed: " + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            });
+        });
+
+        async function loadPasses() {
+            const container = document.getElementById("passes-container");
+            try {
+                const resp = await ApiClient.get("/passes");
+                const passes = resp.data.passes || [];
+
+                if (passes.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; padding: 32px;">
+                            <p style="color: var(--text-muted);">You have not purchased any passes yet.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = passes.map(p => `
+                    <div class="card" style="border-left: 4px solid var(--secondary);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span class="badge badge-status-${p.status.toLowerCase()}">${p.status}</span>
+                                <h3 style="margin: 8px 0 4px 0;">${p.pass_type} Unified Transit Pass</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                    Pass Token: <code>${p.pass_token ? escapeHTML(p.pass_token) : 'Pending Activation'}</code>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.3rem; font-weight: 800; color: var(--primary);">${formatCurrency(p.price)}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                    ${p.valid_until ? 'Valid until: ' + new Date(p.valid_until).toLocaleDateString() : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<div class="card" style="color: var(--error);">Error: ${escapeHTML(err.message)}</div>`;
+            }
+        }
+
+        loadPasses();
+    </script>
+</body>
+</html>
