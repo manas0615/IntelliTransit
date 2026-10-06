@@ -6,6 +6,12 @@ import { auth } from './auth.js';
 import { formatCurrency, formatDateTime } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const user = auth.getUser();
+  if (!auth.isAuthenticated() || !user || user.role !== 'ADMIN') {
+    sessionStorage.setItem('auth_flash_message', 'Conductor access required. Please sign in with an authorized conductor account.');
+    window.location.replace('/login.html?mode=conductor');
+    return;
+  }
   await auth.initAuthNav();
 
   const validateForm = document.getElementById('validateForm');

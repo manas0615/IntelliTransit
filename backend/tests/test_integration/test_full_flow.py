@@ -109,10 +109,24 @@ def test_complete_commuter_transit_lifecycle(app, client):
     # -------------------------------------------------------------
     # 6. Conductor / Gate Inspection & Consumption (ACTIVE -> USED)
     # -------------------------------------------------------------
+    # First verify commuter cannot perform conductor validation
+    val_commuter_resp = client.post("/api/validation/validate", json={
+        "token": ticket_token
+    }, headers=headers)
+    assert val_commuter_resp.status_code == 403
+
+    # Authenticate as authorized conductor
+    cond_login = client.post("/api/auth/login", json={
+        "email": "conductor@intellitransit.com",
+        "password": "ConductorPassword123!"
+    })
+    assert cond_login.status_code == 200
+    cond_headers = {"Authorization": f"Bearer {cond_login.get_json()['data']['token']}"}
+
     val_resp1 = client.post("/api/validation/validate", json={
         "token": ticket_token,
         "remarks": "Gate 1 Turnstile Scan"
-    }, headers=headers)
+    }, headers=cond_headers)
     assert val_resp1.status_code == 200
     val_data = val_resp1.get_json()["data"]
     assert val_data["validation_status"] == "VALID"
@@ -128,6 +142,6 @@ def test_complete_commuter_transit_lifecycle(app, client):
     val_resp2 = client.post("/api/validation/validate", json={
         "token": ticket_token,
         "remarks": "Gate 2 Re-scan"
-    }, headers=headers)
+    }, headers=cond_headers)
     assert val_resp2.status_code == 400
     assert val_resp2.get_json()["error"]["code"] == "ALREADY_USED"

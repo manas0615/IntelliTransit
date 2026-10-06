@@ -67,31 +67,37 @@
   </style>
 </head>
 <body>
-  <!-- Global Navigation -->
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <a href="/" class="brand-logo">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">IntelliTransit</span>
-      </a>
-      <span class="badge" style="background: #fee2e2; color: #991b1b; margin-left: 8px;">Admin Console</span>
-    </div>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="/planner.html">Planner</a></li>
-      <li><a href="/tickets.html">Tickets</a></li>
-      <li><a href="/passes.html">Passes</a></li>
-      <li><a href="/ai-assistant.html">AI Assistant</a></li>
-      <li><a href="/validator.html">Validator</a></li>
-      <li><a href="/admin.html" class="active" id="adminNavLink">Admin</a></li>
-    </ul>
-    <div class="nav-actions" id="navAuth">
-      <a href="/login.html" class="btn btn-outline btn-sm">Login</a>
-    </div>
-  </nav>
+    <script type="module">
+      import { auth } from '/js/auth.js';
+      const user = auth.getUser();
+      if (!auth.isAuthenticated() || !user || user.role !== 'ADMIN') {
+        sessionStorage.setItem('auth_flash_message', 'Administrator access required. Please sign in with an authorized administrator account.');
+        window.location.replace('/login.html?mode=administrator');
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          const main = document.getElementById('adminMain');
+          if (main) main.style.display = 'block';
+        });
+      }
+    </script>
 
-  <main class="admin-container">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+  <main class="admin-container" id="adminMain" style="display: none;">
     <div class="page-header" style="margin-bottom: var(--spacing-lg); display: flex; justify-content: space-between; align-items: center;">
       <div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span class="badge" style="background: #fee2e2; color: #991b1b; font-size: 0.85rem; padding: 4px 10px;">🛡️ Administrator Console</span>
+        </div>
         <h1>System Administration Dashboard</h1>
         <p class="text-secondary">Manage transit modes, fare matrices, commuter accounts, and platform health</p>
       </div>

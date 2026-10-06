@@ -37,6 +37,11 @@
         import ApiClient from "/js/api.js";
         import { formatCurrency, formatDuration, formatDistance, escapeHTML, showError } from "/js/utils.js";
 
+        if (!ApiClient.getToken()) {
+            sessionStorage.setItem("auth_flash_message", "Please sign in to view your journey history.");
+            window.location.replace("/login.html?mode=commuter");
+        }
+
         async function loadHistory() {
             const container = document.getElementById("history-container");
             try {

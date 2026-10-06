@@ -51,6 +51,20 @@ def test_admin_rbac_forbidden_for_commuter(client, commuter_user):
     assert resp_users.status_code == 403
 
 
+def test_user_cannot_access_admin(client, commuter_user):
+    """Ensure standard commuter accounts cannot access admin endpoints."""
+    headers = {"Authorization": f"Bearer {commuter_user['token']}"}
+    resp = client.get("/api/admin/metrics", headers=headers)
+    assert resp.status_code == 403
+
+
+def test_admin_can_access_admin(client, admin_user):
+    """Ensure administrator accounts can access admin endpoints."""
+    headers = {"Authorization": f"Bearer {admin_user['token']}"}
+    resp = client.get("/api/admin/metrics", headers=headers)
+    assert resp.status_code == 200
+
+
 def test_admin_metrics_and_overview(client, admin_user):
     """Ensure admins can retrieve aggregated metrics."""
     headers = {"Authorization": f"Bearer {admin_user['token']}"}

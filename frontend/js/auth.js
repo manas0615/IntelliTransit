@@ -82,31 +82,43 @@ export class AuthManager {
                            path.endsWith("/login") || 
                            path.endsWith("/register");
 
+        const isPlanner = path.includes("planner");
+        const isAi = path.includes("ai-assistant");
+        const isTickets = path.includes("tickets");
+        const isPasses = path.includes("passes");
+        const isHistory = path.includes("history");
+        const isProfile = path.includes("profile");
+        const isAdminPage = path.includes("admin");
+        const isValidator = path.includes("validator");
+        const isLogin = path.includes("login");
+        const isRegister = path.includes("register");
+
         let linksHtml = `
-            <li><a href="/planner.html" class="nav-link">Plan Journey</a></li>
-            <li><a href="/ai-assistant.html" class="nav-link">AI Assistant</a></li>
+            <li><a href="/planner.html" class="nav-link ${isPlanner ? 'active' : ''}">Plan Journey</a></li>
+            <li><a href="/ai-assistant.html" class="nav-link ${isAi ? 'active' : ''}">AI Assistant</a></li>
         `;
 
         if (isAuth && !isAuthPage) {
-            linksHtml += `
-                <li><a href="/tickets.html" class="nav-link">My Tickets</a></li>
-                <li><a href="/passes.html" class="nav-link">Passes</a></li>
-                <li><a href="/history.html" class="nav-link">History</a></li>
-                <li><a href="/profile.html" class="nav-link">Profile</a></li>
-            `;
             if (isAdmin) {
                 linksHtml += `
-                    <li><a href="/admin.html" class="nav-link" style="color: var(--accent); font-weight: bold;">Admin</a></li>
-                    <li><a href="/validator.html" class="nav-link" style="color: var(--secondary); font-weight: bold;">Validator</a></li>
+                    <li><a href="/admin.html" class="nav-link ${isAdminPage ? 'active' : ''}">Dashboard</a></li>
+                    <li><a href="/validator.html" class="nav-link ${isValidator ? 'active' : ''}">Validator</a></li>
+                `;
+            } else {
+                linksHtml += `
+                    <li><a href="/tickets.html" class="nav-link ${isTickets ? 'active' : ''}">My Tickets</a></li>
+                    <li><a href="/passes.html" class="nav-link ${isPasses ? 'active' : ''}">Passes</a></li>
+                    <li><a href="/history.html" class="nav-link ${isHistory ? 'active' : ''}">History</a></li>
                 `;
             }
             linksHtml += `
+                <li><a href="/profile.html" class="nav-link ${isProfile ? 'active' : ''}">Profile</a></li>
                 <li><button id="logout-btn" class="btn btn-outline btn-sm">Logout</button></li>
             `;
         } else {
             linksHtml += `
-                <li><a href="/login.html" class="nav-link">Login</a></li>
-                <li><a href="/register.html" class="btn btn-primary btn-sm">Sign Up</a></li>
+                <li><a href="/login.html" class="nav-link ${isLogin ? 'active' : ''}">Login</a></li>
+                <li><a href="/register.html" class="btn btn-primary btn-sm ${isRegister ? 'active' : ''}">Sign Up</a></li>
             `;
         }
 

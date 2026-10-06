@@ -1,6 +1,7 @@
 """
 Unit & Integration Tests for Ticket and Pass Validation Engine.
-Tests single-use ticket consumption, double-scan prevention, and QR generation.
+Tests single-use ticket consumption, double-scan prevention, QR generation,
+and RBAC enforcement on conductor validation endpoints.
 """
 import pytest
 import uuid
@@ -13,9 +14,9 @@ from app.models.pass_model import PassModel
 
 @pytest.fixture
 def auth_user(client):
-    email = f"validator_{uuid.uuid4().hex[:8]}@example.com"
+    email = f"commuter_{uuid.uuid4().hex[:8]}@example.com"
     reg = client.post("/api/auth/register", json={
-        "full_name": "Ticket Inspector",
+        "full_name": "Test Commuter",
         "email": email,
         "password": "Password123!"
     })
@@ -23,7 +24,33 @@ def auth_user(client):
     return {"user_id": data["user"]["user_id"], "token": data["token"]}
 
 
-def test_ticket_validation_flow(client, auth_user):
+@pytest.fixture
+def conductor_headers(client):
+    login = client.post("/api/auth/login", json={
+        "email": "conductor@intellitransit.com",
+        "password": "ConductorPassword123!"
+    })
+    token = login.get_json()["data"]["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_user_cannot_access_validator(client, auth_user):
+    """Ensure standard commuter accounts cannot access validator endpoints."""
+    headers = {"Authorization": f"Bearer {auth_user['token']}"}
+    resp1 = client.post("/api/validation/validate", json={"token": "TKT-FAKE"}, headers=headers)
+    assert resp1.status_code == 403
+
+    resp2 = client.get("/api/validation/history", headers=headers)
+    assert resp2.status_code == 403
+
+
+def test_admin_can_access_validator(client, conductor_headers):
+    """Ensure authorized staff/admin accounts can access validator endpoints."""
+    resp = client.get("/api/validation/history", headers=conductor_headers)
+    assert resp.status_code == 200
+
+
+def test_ticket_validation_flow(client, auth_user, conductor_headers):
     token = auth_user["token"]
     user_id = auth_user["user_id"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -69,29 +96,35 @@ def test_ticket_validation_flow(client, auth_user):
     ticket = TicketModel.get_by_id(ticket_id)
     ticket_token = ticket["ticket_token"]
 
-    # 4. Request QR code
+    # 4. Request QR code (commuter can fetch their own QR code)
     qr_resp = client.get(f"/api/tickets/{ticket_id}/qr", headers=headers)
     assert qr_resp.status_code == 200
     qr_data = qr_resp.get_json()["data"]
     assert qr_data["qr_data_uri"].startswith("data:image/png;base64,")
 
-    # 5. First scan -> Success, marked as USED
-    val_resp1 = client.post("/api/validation/validate", json={
+    # 5. Commuter attempts to scan/validate -> Rejection with 403 Forbidden
+    val_unauth = client.post("/api/validation/validate", json={
         "token": ticket_token
     }, headers=headers)
+    assert val_unauth.status_code == 403
+
+    # 6. Conductor scan -> Success, marked as USED
+    val_resp1 = client.post("/api/validation/validate", json={
+        "token": ticket_token
+    }, headers=conductor_headers)
     assert val_resp1.status_code == 200
     assert val_resp1.get_json()["data"]["validation_status"] == "VALID"
 
-    # 6. Second scan -> Fail with ALREADY_USED
+    # 7. Second scan -> Fail with ALREADY_USED
     val_resp2 = client.post("/api/validation/validate", json={
         "token": ticket_token
-    }, headers=headers)
+    }, headers=conductor_headers)
     assert val_resp2.status_code == 400
     error_data = val_resp2.get_json()
     assert error_data["error"]["code"] == "ALREADY_USED"
 
 
-def test_pass_validation_flow(client, auth_user):
+def test_pass_validation_flow(client, auth_user, conductor_headers):
     token = auth_user["token"]
     user_id = auth_user["user_id"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -110,12 +143,12 @@ def test_pass_validation_flow(client, auth_user):
     pass_token = f"PASS-DAILY-{pass_id[:8]}"
     PassModel.activate(pass_id, pass_token, valid_from, valid_until)
 
-    # 3. Validate Pass (First Scan) -> Success
-    v1 = client.post("/api/validation/validate", json={"token": pass_token}, headers=headers)
+    # 3. Conductor validates pass (First Scan) -> Success
+    v1 = client.post("/api/validation/validate", json={"token": pass_token}, headers=conductor_headers)
     assert v1.status_code == 200
     assert v1.get_json()["data"]["type"] == "PASS"
 
-    # 4. Validate Pass (Second Scan) -> Still Success (Unlimited rides within window)
-    v2 = client.post("/api/validation/validate", json={"token": pass_token}, headers=headers)
+    # 4. Conductor validates pass (Second Scan) -> Still Success (Unlimited rides within window)
+    v2 = client.post("/api/validation/validate", json={"token": pass_token}, headers=conductor_headers)
     assert v2.status_code == 200
     assert v2.get_json()["data"]["type"] == "PASS"

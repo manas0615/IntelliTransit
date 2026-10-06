@@ -120,6 +120,11 @@
         import ApiClient from "/js/api.js";
         import { showSuccess, showError, escapeHTML } from "/js/utils.js";
 
+        if (!ApiClient.getToken()) {
+            sessionStorage.setItem("auth_flash_message", "Please sign in to view and edit your profile.");
+            window.location.replace("/login.html?mode=commuter");
+        }
+
         async function loadProfileData() {
             try {
                 const resp = await ApiClient.get("/users/profile");

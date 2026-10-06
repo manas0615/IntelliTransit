@@ -6,15 +6,13 @@ import { auth } from './auth.js';
 import { formatCurrency, formatDateTime } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await auth.initAuthNav();
-
-  // Check admin role
   const user = auth.getUser();
-  if (!user || user.role !== 'ADMIN') {
-    alert('Access restricted to administrators only.');
-    window.location.href = '/login.html';
+  if (!auth.isAuthenticated() || !user || user.role !== 'ADMIN') {
+    sessionStorage.setItem('auth_flash_message', 'Administrator access required. Please sign in with an authorized administrator account.');
+    window.location.replace('/login.html?mode=administrator');
     return;
   }
+  await auth.initAuthNav();
 
   const statUsers = document.getElementById('statUsers');
   const statJourneys = document.getElementById('statJourneys');

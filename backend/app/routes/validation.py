@@ -7,7 +7,7 @@ from backend.app.services.validation_service import ValidationService
 from backend.app.services.qr_service import QRService
 from backend.app.models.ticket import TicketModel
 from backend.app.models.pass_model import PassModel
-from backend.app.middleware.auth_middleware import require_auth
+from backend.app.middleware.auth_middleware import require_auth, require_role
 from backend.app.utils.validators import parse_pagination
 from backend.app.utils.responses import success_response, error_response
 
@@ -16,7 +16,7 @@ validation_bp = Blueprint("validation", __name__, url_prefix="/api")
 
 @validation_bp.route("/validation/validate", methods=["POST"])
 @validation_bp.route("/validation/tickets", methods=["POST"])
-@require_auth
+@require_role("ADMIN")
 def validate_token():
     """
     Validate a ticket or pass token scanned by conductor/gate scanner.
@@ -100,7 +100,7 @@ def get_pass_qr(pass_id: str):
 
 
 @validation_bp.route("/validation/history", methods=["GET"])
-@require_auth
+@require_role("ADMIN")
 def list_validation_history():
     """List recent validation audit events."""
     limit, _ = parse_pagination(request.args.get("limit"), request.args.get("offset"))

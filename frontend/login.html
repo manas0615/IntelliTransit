@@ -10,8 +10,32 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .mode-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+        .mode-btn:hover {
+            color: var(--primary);
+        }
+        .mode-btn.active {
+            background: var(--bg-card, #ffffff);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="/index.html" class="brand">
@@ -22,9 +46,29 @@
         </div>
     </nav>
 
-    <main class="container" style="max-width: 460px; margin-top: 40px;">
-        <div class="card">
-            <h2 style="text-align: center; margin-bottom: 24px;">Welcome Back</h2>
+    <main class="container" style="max-width: 480px; margin-top: 36px;">
+        <div class="card" style="padding: 32px 28px;">
+            <!-- Role / Mode Selector -->
+            <div class="mode-selector" style="display: flex; background: var(--bg-main, #f1f5f9); border-radius: var(--radius-md); padding: 4px; margin-bottom: 22px; gap: 4px;">
+                <button type="button" class="mode-btn active" id="btn-mode-commuter" data-mode="commuter">
+                    👤 Commuter
+                </button>
+                <button type="button" class="mode-btn" id="btn-mode-administrator" data-mode="administrator">
+                    🛡️ Administrator
+                </button>
+                <button type="button" class="mode-btn" id="btn-mode-conductor" data-mode="conductor">
+                    👮 Conductor
+                </button>
+            </div>
+
+            <!-- Flash message / Alert Banner -->
+            <div id="login-alert" style="display: none; padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 18px; font-size: 0.88rem; line-height: 1.4;"></div>
+
+            <h2 id="login-heading" style="text-align: center; margin-bottom: 6px;">Welcome Back</h2>
+            <p id="login-subheading" style="text-align: center; color: var(--text-secondary); margin-bottom: 22px; font-size: 0.88rem;">
+                Sign in to plan journeys, book transit tickets, and manage passes.
+            </p>
+
             <form id="login-form">
                 <div class="form-group">
                     <label class="form-label" for="email">Email Address</label>
@@ -38,7 +82,7 @@
                     Sign In
                 </button>
             </form>
-            <p style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
+            <p id="signup-prompt" style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
                 Don't have an account? <a href="/register.html" style="color: var(--primary); font-weight: 600;">Sign up</a>
             </p>
         </div>
@@ -46,25 +90,143 @@
 
     <script type="module">
         import { AuthManager } from "/js/auth.js";
-        import { showError } from "/js/utils.js";
+        import ApiClient from "/js/api.js";
 
+        let currentMode = "commuter";
+
+        const headingEl = document.getElementById("login-heading");
+        const subheadingEl = document.getElementById("login-subheading");
+        const alertEl = document.getElementById("login-alert");
+        const emailInput = document.getElementById("email");
+        const modeButtons = document.querySelectorAll(".mode-btn");
+
+        function showLoginAlert(message, type = "error") {
+            alertEl.style.display = "block";
+            alertEl.textContent = message;
+            if (type === "warning") {
+                alertEl.style.background = "#fffbeb";
+                alertEl.style.border = "1px solid #fde68a";
+                alertEl.style.color = "#92400e";
+            } else if (type === "success") {
+                alertEl.style.background = "#f0fdf4";
+                alertEl.style.border = "1px solid #bbf7d0";
+                alertEl.style.color = "#166534";
+            } else {
+                alertEl.style.background = "#fef2f2";
+                alertEl.style.border = "1px solid #fecaca";
+                alertEl.style.color = "#991b1b";
+            }
+        }
+
+        function clearLoginAlert() {
+            alertEl.style.display = "none";
+            alertEl.textContent = "";
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            clearLoginAlert();
+
+            modeButtons.forEach(btn => {
+                if (btn.getAttribute("data-mode") === mode) {
+                    btn.classList.add("active");
+                } else {
+                    btn.classList.remove("active");
+                }
+            });
+
+            if (mode === "administrator") {
+                headingEl.textContent = "Administrator Sign In";
+                subheadingEl.textContent = "Authorized transit administration & system control portal.";
+                emailInput.placeholder = "admin@intellitransit.com";
+            } else if (mode === "conductor") {
+                headingEl.textContent = "Conductor Sign In";
+                subheadingEl.textContent = "Authorized transit conductor & gate validator inspection terminal.";
+                emailInput.placeholder = "conductor@intellitransit.com";
+            } else {
+                headingEl.textContent = "Welcome Back";
+                subheadingEl.textContent = "Sign in to plan journeys, book transit tickets, and manage passes.";
+                emailInput.placeholder = "name@example.com";
+            }
+        }
+
+        // Attach mode button clicks
+        modeButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const mode = btn.getAttribute("data-mode");
+                setMode(mode);
+            });
+        });
+
+        // Parse query parameter mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const modeParam = (urlParams.get("mode") || "").toLowerCase();
+        if (modeParam === "administrator" || modeParam === "admin") {
+            setMode("administrator");
+        } else if (modeParam === "conductor") {
+            setMode("conductor");
+        } else {
+            setMode("commuter");
+        }
+
+        // Check for session flash messages (from direct access protection redirects)
+        const flashMsg = sessionStorage.getItem("auth_flash_message");
+        if (flashMsg) {
+            sessionStorage.removeItem("auth_flash_message");
+            showLoginAlert(flashMsg, "warning");
+        }
+
+        // Login form submit
         document.getElementById("login-form").addEventListener("submit", async (e) => {
             e.preventDefault();
+            clearLoginAlert();
+
             const btn = document.getElementById("submit-btn");
             btn.disabled = true;
             btn.textContent = "Signing in...";
 
-            const email = document.getElementById("email").value;
+            const email = emailInput.value.trim();
             const password = document.getElementById("password").value;
 
             try {
-                await AuthManager.login(email, password);
+                const data = await AuthManager.login(email, password);
+                const user = data.user;
+                const role = user.role;
+
+                // Validate authenticated role against requested login mode
+                if (currentMode === "administrator" && role !== "ADMIN") {
+                    ApiClient.removeToken();
+                    AuthManager.setCurrentUser(null);
+                    showLoginAlert("Administrator access requires an authorized administrator account.", "error");
+                    btn.disabled = false;
+                    btn.textContent = "Sign In";
+                    return;
+                }
+
+                if (currentMode === "conductor" && role !== "ADMIN") {
+                    ApiClient.removeToken();
+                    AuthManager.setCurrentUser(null);
+                    showLoginAlert("Conductor access requires an authorized staff account.", "error");
+                    btn.disabled = false;
+                    btn.textContent = "Sign In";
+                    return;
+                }
+
+                // If allowed, redirect to the appropriate interface
+                let targetUrl = "/planner.html";
+                if (currentMode === "administrator") {
+                    targetUrl = "/admin.html";
+                } else if (currentMode === "conductor") {
+                    targetUrl = "/validator.html";
+                }
+
                 setTimeout(() => {
-                    window.location.href = "/planner.html";
-                }, 400);
-            } catch {
+                    window.location.href = targetUrl;
+                }, 200);
+            } catch (err) {
                 btn.disabled = false;
                 btn.textContent = "Sign In";
+                showLoginAlert(err.message || "Invalid email or password.", "error");
             }
         });
     </script>

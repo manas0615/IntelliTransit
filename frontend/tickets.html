@@ -77,6 +77,11 @@
         import ApiClient from "/js/api.js";
         import { formatCurrency, escapeHTML, showSuccess, showError } from "/js/utils.js";
 
+        if (!ApiClient.getToken()) {
+            sessionStorage.setItem("auth_flash_message", "Please sign in to view your transit tickets.");
+            window.location.replace("/login.html?mode=commuter");
+        }
+
         let currentStatusFilter = "";
 
         // Check if query param has action=buy

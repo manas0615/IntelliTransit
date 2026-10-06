@@ -9,10 +9,12 @@
 @media (max-width: 768px) {
     .nav-container {
         padding: 0 var(--spacing-sm);
+        overflow-x: auto;
     }
 
     .nav-links {
-        gap: var(--spacing-xs);
+        gap: 4px;
+        flex-shrink: 0;
     }
 
     .nav-link {

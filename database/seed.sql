@@ -1,6 +1,6 @@
 -- ============================================================================
 -- IntelliTransit Seed Data
--- Transport Services, Fare Configurations, Initial Admin, and Demo User
+-- Transport Services, Fare Configurations, Administrator, Conductor, and Commuter
 -- ============================================================================
 
 -- Seed Transport Services (Classification: SOURCED & CURATED)
@@ -22,21 +22,29 @@ VALUES
     ('44444444-4444-4444-4444-444444444443', '33333333-3333-3333-3333-333333333333', 'DISTANCE_BASED', 25.00, 17.00, 25.00, '2026-01-01 00:00:00', TRUE)
 ON CONFLICT (fare_id) DO NOTHING;
 
--- Seed Initial Admin User (password: Admin@123 -> bcrypt hash $2b$12$e6x8W2pX5U6x0G7pG7pG7O...)
--- We will use standard bcrypt hash for 'Admin@123' and 'User@123'
+-- Seed Users: Administrator, Conductor, and Commuter
+-- Passwords are encrypted with bcrypt (work factor 12)
+-- admin@intellitransit.com       -> AdminPassword123!
+-- conductor@intellitransit.com   -> ConductorPassword123!
+-- rahul.sharma@example.com       -> UserPassword123!
 INSERT INTO users (user_id, full_name, email, phone, password_hash, role, is_active)
 VALUES 
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'IntelliTransit Admin', 'admin@intellitransit.in', '9876543210', '$2b$12$6t336FwYyK8m.1rN6oQo1eTqjYjQj44Cskg15s6M9d8q0O4mU1xKy', 'ADMIN', TRUE),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Demo Commuter', 'demo@intellitransit.in', '9123456780', '$2b$12$6t336FwYyK8m.1rN6oQo1eTqjYjQj44Cskg15s6M9d8q0O4mU1xKy', 'USER', TRUE)
-ON CONFLICT (email) DO NOTHING;
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'System Administrator', 'admin@intellitransit.com', '9876543210', '$2b$12$74w9hRvnWGNhEMdF9Kl6i.PKNyrefmKRpilPCNpqppfIMuJ6NU7EO', 'ADMIN', TRUE),
+    ('cccccccc-cccc-cccc-cccc-aaaaaaaaaaaa', 'Chief Conductor & Inspector', 'conductor@intellitransit.com', '9876543211', '$2b$12$.6TGj0Atc6mFpuFn4mIciOR1OqsFsGcPFucjeK6kIE0y1Qks05puW', 'ADMIN', TRUE),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Rahul Sharma', 'rahul.sharma@example.com', '9876543212', '$2b$12$4n1amL.slWJgo5eIOckg/e5.GJvno1g/x98mpDcB7gHTsJ8LcOHhS', 'USER', TRUE)
+ON CONFLICT (email) DO UPDATE 
+SET full_name = EXCLUDED.full_name,
+    password_hash = EXCLUDED.password_hash,
+    role = EXCLUDED.role,
+    is_active = EXCLUDED.is_active;
 
--- Seed Preferences for Demo User
+-- Seed Preferences for Rahul Sharma
 INSERT INTO user_preferences (preference_id, user_id, preferred_mode, route_preference, max_walking_distance_m, avoid_taxi, avoid_transfers)
 VALUES 
     ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'METRO', 'FASTEST', 1500, FALSE, FALSE)
 ON CONFLICT (user_id) DO NOTHING;
 
--- Seed Saved Locations for Demo User
+-- Seed Saved Locations for Rahul Sharma
 INSERT INTO saved_locations (location_id, user_id, label, location_name, address, latitude, longitude)
 VALUES 
     ('dddddddd-dddd-dddd-dddd-dddddddddd01', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home', 'Kothrud Stand', 'Paud Road, Kothrud, Pune', 18.5074, 73.8077),

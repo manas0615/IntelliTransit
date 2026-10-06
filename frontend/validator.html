@@ -62,30 +62,36 @@
   </style>
 </head>
 <body>
-  <!-- Global Navigation -->
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <a href="/" class="brand-logo">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">IntelliTransit</span>
-      </a>
-      <span class="badge" style="background: var(--color-primary-light); color: var(--color-primary); margin-left: 8px;">Conductor Mode</span>
-    </div>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="/planner.html">Journey Planner</a></li>
-      <li><a href="/tickets.html">My Tickets</a></li>
-      <li><a href="/passes.html">Passes</a></li>
-      <li><a href="/validator.html" class="active">Validator</a></li>
-      <li><a href="/admin.html" id="adminNavLink" style="display:none;">Admin</a></li>
-    </ul>
-    <div class="nav-actions" id="navAuth">
-      <a href="/login.html" class="btn btn-outline btn-sm">Login</a>
-      <a href="/register.html" class="btn btn-primary btn-sm">Sign Up</a>
-    </div>
-  </nav>
+    <script type="module">
+      import { auth } from '/js/auth.js';
+      const user = auth.getUser();
+      if (!auth.isAuthenticated() || !user || user.role !== 'ADMIN') {
+        sessionStorage.setItem('auth_flash_message', 'Conductor access required. Please sign in with an authorized conductor account.');
+        window.location.replace('/login.html?mode=conductor');
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          const main = document.getElementById('validatorMain');
+          if (main) main.style.display = 'block';
+        });
+      }
+    </script>
 
-  <main class="validator-container">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+  <main class="validator-container" id="validatorMain" style="display: none;">
     <div class="page-header text-center" style="margin-bottom: var(--spacing-lg);">
+      <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 0.85rem; padding: 4px 10px;">👮 Conductor Mode</span>
+      </div>
       <h1>Ticket & Pass Inspection Scanner</h1>
       <p class="text-secondary">Scan QR code or enter token code to verify transit validity</p>
     </div>
