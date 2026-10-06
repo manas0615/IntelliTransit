@@ -61,14 +61,15 @@ class AuthService:
             avoid_transfers=False
         )
 
-        token = create_access_token(user["user_id"], user["role"], user["email"])
+        token = create_access_token(user["user_id"], user["role"], user["email"], user.get("account_type"))
         result_data = {
             "user": {
                 "user_id": user["user_id"],
                 "full_name": user["full_name"],
                 "email": user["email"],
                 "phone": user["phone"],
-                "role": user["role"]
+                "role": user["role"],
+                "account_type": user.get("account_type", "COMMUTER")
             },
             "token": token
         }
@@ -91,14 +92,15 @@ class AuthService:
         if not verify_password(password, user["password_hash"]):
             return False, {"code": "INVALID_CREDENTIALS"}, "Invalid email or password."
 
-        token = create_access_token(user["user_id"], user["role"], user["email"])
+        token = create_access_token(user["user_id"], user["role"], user["email"], user.get("account_type"))
         result_data = {
             "user": {
                 "user_id": user["user_id"],
                 "full_name": user["full_name"],
                 "email": user["email"],
                 "phone": user["phone"],
-                "role": user["role"]
+                "role": user["role"],
+                "account_type": user.get("account_type", "COMMUTER")
             },
             "token": token
         }

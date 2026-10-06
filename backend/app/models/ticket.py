@@ -172,3 +172,33 @@ class TicketModel:
         """
         rows = fetch_all(query)
         return {r["status"]: r["count"] for r in rows}
+
+    @staticmethod
+    def list_all_for_inspection(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List tickets across all commuters for conductor inspection."""
+        params = []
+        where_clause = ""
+        if status:
+            where_clause = "WHERE t.status = %s"
+            params.append(status)
+        params.extend([limit, offset])
+
+        query = f"""
+            SELECT t.ticket_id, t.user_id, t.journey_id, t.journey_leg_id, t.payment_id,
+                   t.ticket_token, t.status, t.origin, t.destination, t.fare,
+                   t.valid_from, t.valid_until, t.created_at,
+                   u.full_name AS passenger_name, u.email AS passenger_email,
+                   jl.mode AS transport_mode, ts.service_name, ts.operator_name,
+                   p.status AS payment_status, p.payment_method,
+                   (SELECT COUNT(*) FROM ticket_validations tv WHERE tv.ticket_id = t.ticket_id) AS validation_count,
+                   (SELECT tv.validation_status FROM ticket_validations tv WHERE tv.ticket_id = t.ticket_id ORDER BY tv.validation_time DESC LIMIT 1) AS last_validation_status
+            FROM tickets t
+            JOIN users u ON t.user_id = u.user_id
+            JOIN journey_legs jl ON t.journey_leg_id = jl.leg_id
+            LEFT JOIN transport_services ts ON jl.service_id = ts.service_id
+            LEFT JOIN payments p ON t.payment_id = p.payment_id
+            {where_clause}
+            ORDER BY t.created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        return fetch_all(query, tuple(params))

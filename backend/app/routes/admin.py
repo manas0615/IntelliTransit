@@ -4,7 +4,7 @@ Protected administrative endpoints for system metrics, user role administration,
 """
 from flask import Blueprint, request, g
 from backend.app.services.admin_service import AdminService
-from backend.app.middleware.auth_middleware import require_role
+from backend.app.middleware.auth_middleware import require_account_type
 from backend.app.utils.validators import parse_pagination
 from backend.app.utils.responses import success_response, error_response
 
@@ -13,7 +13,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 @admin_bp.route("/metrics", methods=["GET"])
 @admin_bp.route("/overview", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def get_metrics():
     """Retrieve system-wide aggregated metrics."""
     metrics = AdminService.get_system_metrics()
@@ -21,7 +21,7 @@ def get_metrics():
 
 
 @admin_bp.route("/users", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def list_users():
     """List platform users."""
     limit, offset = parse_pagination(request.args.get("limit"), request.args.get("offset"))
@@ -30,7 +30,7 @@ def list_users():
 
 
 @admin_bp.route("/users/<string:user_id>/status", methods=["PUT"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def update_user_status(user_id: str):
     """Toggle user active status (suspend/reactivate)."""
     data = request.get_json(silent=True) or {}
@@ -46,7 +46,7 @@ def update_user_status(user_id: str):
 
 
 @admin_bp.route("/users/<string:user_id>/role", methods=["PUT"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def update_user_role(user_id: str):
     """Update user role (USER, ADMIN)."""
     data = request.get_json(silent=True) or {}
@@ -64,7 +64,7 @@ def update_user_role(user_id: str):
 
 
 @admin_bp.route("/services", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def list_services():
     """List transport services."""
     services = AdminService.list_transport_services()
@@ -72,7 +72,7 @@ def list_services():
 
 
 @admin_bp.route("/fares", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def list_fares():
     """List active fare rules."""
     fares = AdminService.list_fare_configurations()
@@ -80,7 +80,7 @@ def list_fares():
 
 
 @admin_bp.route("/fares/<string:fare_id>", methods=["PUT"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def update_fare(fare_id: str):
     """Update base fare, per km rate, or min fare for a transit service."""
     data = request.get_json(silent=True) or {}
@@ -102,7 +102,7 @@ def update_fare(fare_id: str):
 
 
 @admin_bp.route("/validations", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("ADMINISTRATOR")
 def list_validations():
     """List recent validation audit logs."""
     limit, _ = parse_pagination(request.args.get("limit"), request.args.get("offset"))

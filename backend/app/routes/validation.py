@@ -7,7 +7,7 @@ from backend.app.services.validation_service import ValidationService
 from backend.app.services.qr_service import QRService
 from backend.app.models.ticket import TicketModel
 from backend.app.models.pass_model import PassModel
-from backend.app.middleware.auth_middleware import require_auth, require_role
+from backend.app.middleware.auth_middleware import require_auth, require_role, require_account_type
 from backend.app.utils.validators import parse_pagination
 from backend.app.utils.responses import success_response, error_response
 
@@ -16,7 +16,7 @@ validation_bp = Blueprint("validation", __name__, url_prefix="/api")
 
 @validation_bp.route("/validation/validate", methods=["POST"])
 @validation_bp.route("/validation/tickets", methods=["POST"])
-@require_role("ADMIN")
+@require_account_type("CONDUCTOR")
 def validate_token():
     """
     Validate a ticket or pass token scanned by conductor/gate scanner.
@@ -44,6 +44,18 @@ def validate_token():
         return error_response(result.get("code", "VALIDATION_FAILED"), message, 400, details=result)
 
     return success_response(data=result, message=message, status_code=200)
+
+
+@validation_bp.route("/validation/tickets", methods=["GET"])
+@require_account_type("CONDUCTOR")
+def list_conductor_tickets():
+    """
+    List tickets across all commuters for conductor inspection.
+    """
+    limit, offset = parse_pagination(request.args.get("limit"), request.args.get("offset"))
+    status = request.args.get("status")
+    tickets = TicketModel.list_all_for_inspection(limit=limit, offset=offset, status=status)
+    return success_response(data={"tickets": tickets}, message="Conductor ticket records loaded.")
 
 
 @validation_bp.route("/tickets/<string:ticket_id>/qr", methods=["GET"])
@@ -100,7 +112,7 @@ def get_pass_qr(pass_id: str):
 
 
 @validation_bp.route("/validation/history", methods=["GET"])
-@require_role("ADMIN")
+@require_account_type("CONDUCTOR")
 def list_validation_history():
     """List recent validation audit events."""
     limit, _ = parse_pagination(request.args.get("limit"), request.args.get("offset"))

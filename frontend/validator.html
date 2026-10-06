@@ -65,7 +65,8 @@
     <script type="module">
       import { auth } from '/js/auth.js';
       const user = auth.getUser();
-      if (!auth.isAuthenticated() || !user || user.role !== 'ADMIN') {
+      const accountType = user ? (user.account_type || (user.role === 'ADMIN' ? (user.email && user.email.toLowerCase().includes('conductor') ? 'CONDUCTOR' : 'ADMINISTRATOR') : 'COMMUTER')) : null;
+      if (!auth.isAuthenticated() || !user || accountType !== 'CONDUCTOR') {
         sessionStorage.setItem('auth_flash_message', 'Conductor access required. Please sign in with an authorized conductor account.');
         window.location.replace('/login.html?mode=conductor');
       } else {

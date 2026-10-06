@@ -191,25 +191,45 @@
             try {
                 const data = await AuthManager.login(email, password);
                 const user = data.user;
-                const role = user.role;
 
-                // Validate authenticated role against requested login mode
-                if (currentMode === "administrator" && role !== "ADMIN") {
-                    ApiClient.removeToken();
-                    AuthManager.setCurrentUser(null);
-                    showLoginAlert("Administrator access requires an authorized administrator account.", "error");
-                    btn.disabled = false;
-                    btn.textContent = "Sign In";
-                    return;
+                let accountType = user.account_type;
+                if (!accountType) {
+                    if (user.role === "ADMIN") {
+                        accountType = (user.email || "").toLowerCase().includes("conductor") ? "CONDUCTOR" : "ADMINISTRATOR";
+                    } else {
+                        accountType = "COMMUTER";
+                    }
                 }
+                accountType = accountType.toUpperCase();
 
-                if (currentMode === "conductor" && role !== "ADMIN") {
-                    ApiClient.removeToken();
-                    AuthManager.setCurrentUser(null);
-                    showLoginAlert("Conductor access requires an authorized staff account.", "error");
-                    btn.disabled = false;
-                    btn.textContent = "Sign In";
-                    return;
+                // Validate authenticated account type against requested login mode
+                if (currentMode === "commuter") {
+                    if (accountType !== "COMMUTER" || user.role === "ADMIN") {
+                        ApiClient.removeToken();
+                        AuthManager.setCurrentUser(null);
+                        showLoginAlert("Commuter access requires an authorized commuter account.", "error");
+                        btn.disabled = false;
+                        btn.textContent = "Sign In";
+                        return;
+                    }
+                } else if (currentMode === "administrator") {
+                    if (accountType !== "ADMINISTRATOR") {
+                        ApiClient.removeToken();
+                        AuthManager.setCurrentUser(null);
+                        showLoginAlert("Administrator access requires an authorized administrator account.", "error");
+                        btn.disabled = false;
+                        btn.textContent = "Sign In";
+                        return;
+                    }
+                } else if (currentMode === "conductor") {
+                    if (accountType !== "CONDUCTOR") {
+                        ApiClient.removeToken();
+                        AuthManager.setCurrentUser(null);
+                        showLoginAlert("Conductor access requires an authorized conductor account.", "error");
+                        btn.disabled = false;
+                        btn.textContent = "Sign In";
+                        return;
+                    }
                 }
 
                 // If allowed, redirect to the appropriate interface
@@ -218,6 +238,11 @@
                     targetUrl = "/admin.html";
                 } else if (currentMode === "conductor") {
                     targetUrl = "/validator.html";
+                } else {
+                    const redirectParam = urlParams.get("redirect");
+                    if (redirectParam && !redirectParam.startsWith("http") && !redirectParam.includes("//")) {
+                        targetUrl = redirectParam;
+                    }
                 }
 
                 setTimeout(() => {

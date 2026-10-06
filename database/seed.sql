@@ -27,15 +27,16 @@ ON CONFLICT (fare_id) DO NOTHING;
 -- admin@intellitransit.com       -> AdminPassword123!
 -- conductor@intellitransit.com   -> ConductorPassword123!
 -- rahul.sharma@example.com       -> UserPassword123!
-INSERT INTO users (user_id, full_name, email, phone, password_hash, role, is_active)
+INSERT INTO users (user_id, full_name, email, phone, password_hash, role, account_type, is_active)
 VALUES 
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'System Administrator', 'admin@intellitransit.com', '9876543210', '$2b$12$74w9hRvnWGNhEMdF9Kl6i.PKNyrefmKRpilPCNpqppfIMuJ6NU7EO', 'ADMIN', TRUE),
-    ('cccccccc-cccc-cccc-cccc-aaaaaaaaaaaa', 'Chief Conductor & Inspector', 'conductor@intellitransit.com', '9876543211', '$2b$12$.6TGj0Atc6mFpuFn4mIciOR1OqsFsGcPFucjeK6kIE0y1Qks05puW', 'ADMIN', TRUE),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Rahul Sharma', 'rahul.sharma@example.com', '9876543212', '$2b$12$4n1amL.slWJgo5eIOckg/e5.GJvno1g/x98mpDcB7gHTsJ8LcOHhS', 'USER', TRUE)
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'System Administrator', 'admin@intellitransit.com', '9876543210', '$2b$12$74w9hRvnWGNhEMdF9Kl6i.PKNyrefmKRpilPCNpqppfIMuJ6NU7EO', 'ADMIN', 'ADMINISTRATOR', TRUE),
+    ('cccccccc-cccc-cccc-cccc-aaaaaaaaaaaa', 'Chief Conductor & Inspector', 'conductor@intellitransit.com', '9876543211', '$2b$12$.6TGj0Atc6mFpuFn4mIciOR1OqsFsGcPFucjeK6kIE0y1Qks05puW', 'ADMIN', 'CONDUCTOR', TRUE),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Rahul Sharma', 'rahul.sharma@example.com', '9876543212', '$2b$12$4n1amL.slWJgo5eIOckg/e5.GJvno1g/x98mpDcB7gHTsJ8LcOHhS', 'USER', 'COMMUTER', TRUE)
 ON CONFLICT (email) DO UPDATE 
 SET full_name = EXCLUDED.full_name,
     password_hash = EXCLUDED.password_hash,
     role = EXCLUDED.role,
+    account_type = EXCLUDED.account_type,
     is_active = EXCLUDED.is_active;
 
 -- Seed Preferences for Rahul Sharma

@@ -7,7 +7,7 @@ import jwt
 from backend.app.config import Config
 
 
-def create_access_token(user_id: str, role: str, email: str, expires_delta_hours: Optional[int] = None) -> str:
+def create_access_token(user_id: str, role: str, email: str, account_type: Optional[str] = None, expires_delta_hours: Optional[int] = None) -> str:
     """
     Generate a signed HS256 JWT access token with standard claims.
     """
@@ -15,10 +15,17 @@ def create_access_token(user_id: str, role: str, email: str, expires_delta_hours
     now = datetime.now(timezone.utc)
     expire = now + timedelta(hours=hours)
 
+    if not account_type:
+        if role == "ADMIN":
+            account_type = "CONDUCTOR" if "conductor" in email.lower() else "ADMINISTRATOR"
+        else:
+            account_type = "COMMUTER"
+
     payload = {
         "sub": user_id,
         "user_id": user_id,
         "role": role,
+        "account_type": account_type,
         "email": email,
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp())

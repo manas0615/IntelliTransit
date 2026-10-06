@@ -74,7 +74,18 @@ export class AuthManager {
 
         const isAuth = AuthManager.isAuthenticated();
         const user = AuthManager.getCurrentUser();
-        const isAdmin = user && user.role === "ADMIN";
+
+        let accountType = "GUEST";
+        if (isAuth && user) {
+            if (user.account_type) {
+                accountType = user.account_type.toUpperCase();
+            } else if (user.role === "ADMIN") {
+                const email = (user.email || "").toLowerCase();
+                accountType = email.includes("conductor") ? "CONDUCTOR" : "ADMINISTRATOR";
+            } else {
+                accountType = "COMMUTER";
+            }
+        }
 
         const path = window.location.pathname.toLowerCase();
         const isAuthPage = path.endsWith("/login.html") || 
@@ -84,41 +95,51 @@ export class AuthManager {
 
         const isPlanner = path.includes("planner");
         const isAi = path.includes("ai-assistant");
-        const isTickets = path.includes("tickets");
+        const isTickets = path.includes("tickets") && !path.includes("ticket-history") && !path.includes("conductor");
         const isPasses = path.includes("passes");
-        const isHistory = path.includes("history");
+        const isHistory = path.includes("history") && !path.includes("ticket-history");
         const isProfile = path.includes("profile");
-        const isAdminPage = path.includes("admin");
+        const isDashboard = path.includes("admin");
         const isValidator = path.includes("validator");
+        const isConductorTickets = path.includes("ticket-history") || path.includes("conductor-tickets");
         const isLogin = path.includes("login");
         const isRegister = path.includes("register");
 
-        let linksHtml = `
-            <li><a href="/planner.html" class="nav-link ${isPlanner ? 'active' : ''}">Plan Journey</a></li>
-            <li><a href="/ai-assistant.html" class="nav-link ${isAi ? 'active' : ''}">AI Assistant</a></li>
-        `;
+        let linksHtml = "";
 
-        if (isAuth && !isAuthPage) {
-            if (isAdmin) {
-                linksHtml += `
-                    <li><a href="/admin.html" class="nav-link ${isAdminPage ? 'active' : ''}">Dashboard</a></li>
-                    <li><a href="/validator.html" class="nav-link ${isValidator ? 'active' : ''}">Validator</a></li>
-                `;
-            } else {
-                linksHtml += `
-                    <li><a href="/tickets.html" class="nav-link ${isTickets ? 'active' : ''}">My Tickets</a></li>
-                    <li><a href="/passes.html" class="nav-link ${isPasses ? 'active' : ''}">Passes</a></li>
-                    <li><a href="/history.html" class="nav-link ${isHistory ? 'active' : ''}">History</a></li>
-                `;
-            }
-            linksHtml += `
+        if (!isAuth || isAuthPage) {
+            // A. GUEST NAV (also shown on auth pages without logout)
+            linksHtml = `
+                <li><a href="/planner.html" class="nav-link ${isPlanner ? 'active' : ''}">Plan Journey</a></li>
+                <li><a href="/ai-assistant.html" class="nav-link ${isAi ? 'active' : ''}">AI Assistant</a></li>
+                <li><a href="/login.html" class="nav-link ${isLogin ? 'active' : ''}">Login</a></li>
+                <li><a href="/register.html" class="btn btn-primary btn-sm ${isRegister ? 'active' : ''}">Sign Up</a></li>
+            `;
+        } else if (accountType === "ADMINISTRATOR") {
+            // C. ADMINISTRATOR NAV
+            linksHtml = `
+                <li><a href="/admin.html" class="nav-link ${isDashboard ? 'active' : ''}">Dashboard</a></li>
+                <li><a href="/profile.html" class="nav-link ${isProfile ? 'active' : ''}">Profile</a></li>
+                <li><button id="logout-btn" class="btn btn-outline btn-sm">Logout</button></li>
+            `;
+        } else if (accountType === "CONDUCTOR") {
+            // D. CONDUCTOR NAV
+            linksHtml = `
+                <li><a href="/validator.html" class="nav-link ${isValidator ? 'active' : ''}">Validator</a></li>
+                <li><a href="/ticket-history.html" class="nav-link ${isConductorTickets ? 'active' : ''}">Ticket History</a></li>
                 <li><a href="/profile.html" class="nav-link ${isProfile ? 'active' : ''}">Profile</a></li>
                 <li><button id="logout-btn" class="btn btn-outline btn-sm">Logout</button></li>
             `;
         } else {
-            linksHtml += `
-                <li><a href="/login.html" class="nav-link ${isLogin ? 'active' : ''}">Login</a></li>
-                <li><a href="/register.html" class="btn btn-primary btn-sm ${isRegister ? 'active' : ''}">Sign Up</a></li>
+            // B. COMMUTER / USER NAV
+            linksHtml = `
+                <li><a href="/planner.html" class="nav-link ${isPlanner ? 'active' : ''}">Plan Journey</a></li>
+                <li><a href="/ai-assistant.html" class="nav-link ${isAi ? 'active' : ''}">AI Assistant</a></li>
+                <li><a href="/tickets.html" class="nav-link ${isTickets ? 'active' : ''}">My Tickets</a></li>
+                <li><a href="/passes.html" class="nav-link ${isPasses ? 'active' : ''}">Passes</a></li>
+                <li><a href="/history.html" class="nav-link ${isHistory ? 'active' : ''}">History</a></li>
+                <li><a href="/profile.html" class="nav-link ${isProfile ? 'active' : ''}">Profile</a></li>
+                <li><button id="logout-btn" class="btn btn-outline btn-sm">Logout</button></li>
             `;
         }
 

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket Inspection History | IntelliTransit Conductor</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/reset.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    .inspection-container {
+      max-width: 1200px;
+      margin: var(--spacing-xl) auto;
+      padding: 0 var(--spacing-md);
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-ACTIVE { background: #dcfce7; color: #166534; }
+    .status-USED { background: #f3f4f6; color: #4b5563; }
+    .status-PENDING { background: #fef9c3; color: #854d0e; }
+    .status-CANCELLED { background: #fee2e2; color: #991b1b; }
+    .mode-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .mode-BUS { background: #dbeafe; color: #1e40af; }
+    .mode-METRO { background: #e0e7ff; color: #4338ca; }
+    .mode-TAXI { background: #fef3c7; color: #92400e; }
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .filter-btn.active {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+    .tickets-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .tickets-table th, .tickets-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .tickets-table th {
+      background: var(--color-surface);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .token-cell {
+      font-family: monospace;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+  </style>
+</head>
+<body>
+    <script type="module">
+      import { auth } from '/js/auth.js';
+      const user = auth.getUser();
+      const accountType = user ? (user.account_type || (user.role === 'ADMIN' ? (user.email && user.email.toLowerCase().includes('conductor') ? 'CONDUCTOR' : 'ADMINISTRATOR') : 'COMMUTER')) : null;
+      if (!auth.isAuthenticated() || !user || accountType !== 'CONDUCTOR') {
+        sessionStorage.setItem('auth_flash_message', 'Conductor access required. Please sign in with an authorized conductor account.');
+        window.location.replace('/login.html?mode=conductor');
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          const main = document.getElementById('historyMain');
+          if (main) main.style.display = 'block';
+        });
+      }
+    </script>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <div class="brand-icon">🚇</div>
+                <span>IntelliTransit</span>
+            </a>
+            <ul id="navbar-links" class="nav-links"></ul>
+        </div>
+    </nav>
+
+    <main class="inspection-container" id="historyMain" style="display: none;">
+      <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <span class="badge" style="background: var(--primary-light, #e0f2fe); color: var(--primary, #0284c7); font-size: 0.85rem; padding: 4px 10px; border-radius: 4px; font-weight: 600;">👮 Conductor Inspection</span>
+        </div>
+        <h1>Commuter Ticket Inspection History</h1>
+        <p class="text-secondary">Inspect commuter-purchased tickets, fare verification details, and validation records across services.</p>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn active" data-status="">All Tickets</button>
+        <button class="filter-btn" data-status="ACTIVE">Active</button>
+        <button class="filter-btn" data-status="USED">Used</button>
+        <button class="filter-btn" data-status="PENDING">Pending</button>
+        <div style="margin-left: auto;">
+          <input type="text" id="searchInput" placeholder="Filter by token or passenger..." class="form-input" style="padding: 6px 12px; font-size: 0.85rem; width: 240px;">
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0; overflow-x: auto;">
+        <table class="tickets-table">
+          <thead>
+            <tr>
+              <th>Ticket Token</th>
+              <th>Passenger</th>
+              <th>Route</th>
+              <th>Mode / Service</th>
+              <th>Fare</th>
+              <th>Ticket Status</th>
+              <th>Payment</th>
+              <th>Valid Window</th>
+              <th>Scans</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTableBody">
+            <tr>
+              <td colspan="10" style="text-align: center; padding: 32px;" class="text-secondary">Loading ticket records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <script type="module">
+      import ApiClient from '/js/api.js';
+      import { auth } from '/js/auth.js';
+
+      let allTickets = [];
+      let currentFilterStatus = "";
+
+      async function loadTickets() {
+        try {
+          const url = currentFilterStatus ? `/validation/tickets?status=${currentFilterStatus}` : `/validation/tickets`;
+          const resp = await ApiClient.get(url);
+          allTickets = resp.data.tickets || [];
+          renderTickets();
+        } catch (err) {
+          const tbody = document.getElementById('ticketsTableBody');
+          tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--color-error); padding: 24px;">Failed to load ticket records: ${err.message}</td></tr>`;
+        }
+      }
+
+      function renderTickets() {
+        const tbody = document.getElementById('ticketsTableBody');
+        const filterText = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        const filtered = allTickets.filter(t => {
+          if (!filterText) return true;
+          const token = (t.ticket_token || '').toLowerCase();
+          const passenger = (t.passenger_name || '').toLowerCase();
+          const email = (t.passenger_email || '').toLowerCase();
+          const origin = (t.origin || '').toLowerCase();
+          const dest = (t.destination || '').toLowerCase();
+          return token.includes(filterText) || passenger.includes(filterText) || email.includes(filterText) || origin.includes(filterText) || dest.includes(filterText);
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 32px;" class="text-secondary">No matching ticket inspection records found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(t => {
+          const validFrom = t.valid_from ? new Date(t.valid_from).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+          const validUntil = t.valid_until ? new Date(t.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+          const mode = t.transport_mode || 'TRANSIT';
+          const service = t.service_name || t.operator_name || '';
+
+          return `
+            <tr>
+              <td class="token-cell">${t.ticket_token}</td>
+              <td>
+                <div style="font-weight: 600;">${t.passenger_name || 'Anonymous'}</div>
+                <div class="text-secondary" style="font-size: 0.78rem;">${t.passenger_email || ''}</div>
+              </td>
+              <td>${t.origin} → ${t.destination}</td>
+              <td>
+                <span class="mode-badge mode-${mode}">${mode}</span>
+                ${service ? `<div class="text-secondary" style="font-size: 0.78rem; margin-top: 2px;">${service}</div>` : ''}
+              </td>
+              <td style="font-weight: 600;">₹${parseFloat(t.fare || 0).toFixed(2)}</td>
+              <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+              <td>
+                <span style="font-size: 0.8rem; font-weight: 600; color: ${t.payment_status === 'SUCCESS' ? 'var(--color-success, #16a34a)' : 'inherit'}">
+                  ${t.payment_status || 'PENDING'}
+                </span>
+              </td>
+              <td style="font-size: 0.8rem;">${validFrom} – ${validUntil}</td>
+              <td>
+                <span style="font-weight: 600;">${t.validation_count || 0}</span>
+                ${t.last_validation_status ? `<span class="status-badge status-${t.last_validation_status}" style="font-size: 0.7rem; margin-left: 4px;">${t.last_validation_status}</span>` : ''}
+              </td>
+              <td>
+                <a href="/validator.html?token=${encodeURIComponent(t.ticket_token)}" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 4px 8px;">Scan</a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilterStatus = btn.getAttribute('data-status');
+          loadTickets();
+        });
+      });
+
+      document.getElementById('searchInput').addEventListener('input', () => {
+        renderTickets();
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        loadTickets();
+      });
+    </script>
+</body>
+</html>

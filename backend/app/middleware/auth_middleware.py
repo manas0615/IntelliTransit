@@ -86,6 +86,37 @@ def require_role(required_role: str) -> Callable:
     return decorator
 
 
+def require_account_type(expected_type: str) -> Callable:
+    """Decorator requiring specific account_type ('COMMUTER', 'ADMINISTRATOR', 'CONDUCTOR')."""
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        @require_auth
+        def decorated(*args, **kwargs):
+            current_user = getattr(g, "current_user", None)
+            if not current_user:
+                return error_response("FORBIDDEN", "Authentication required.", 403)
+
+            acct_type = current_user.get("account_type")
+            if not acct_type:
+                role = current_user.get("role", "USER")
+                email = (current_user.get("email") or "").lower()
+                if role == "ADMIN":
+                    acct_type = "CONDUCTOR" if "conductor" in email else "ADMINISTRATOR"
+                else:
+                    acct_type = "COMMUTER"
+
+            if acct_type != expected_type:
+                label = "Administrator" if expected_type == "ADMINISTRATOR" else ("Conductor" if expected_type == "CONDUCTOR" else "Commuter")
+                return error_response(
+                    "FORBIDDEN",
+                    f"{label} privileges are required for this action.",
+                    403
+                )
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
 def optional_auth(f: Callable) -> Callable:
     """Decorator that attaches g.current_user if token present, but does not reject guests."""
     @wraps(f)

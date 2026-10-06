@@ -74,13 +74,7 @@ class AdminService:
         if clean_role not in ('USER', 'ADMIN'):
             raise ValueError(f"Invalid role: {role}. Must be USER or ADMIN.")
 
-        query = """
-            UPDATE users
-            SET role = %s, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = %s
-            RETURNING user_id, email, full_name, role, is_active, updated_at;
-        """
-        return fetch_one(query, (clean_role, user_id))
+        return UserModel.update_role(user_id, clean_role)
 
     @staticmethod
     def list_transport_services() -> List[Dict[str, Any]]:
